@@ -159,3 +159,83 @@ class EmployeeFactory:
 john = EmployeeFactory.new_sydney_employee("John") # John works @ 001, Main street, Sydney
 jane = EmployeeFactory.new_melbourne_employee("Jane") # Jane works @ 500, Kings street, Melbourne
 ```
+
+### Section 12: Proxy
+
+1. A proxy has the same interface as the underlying object
+2. To create a proxy, simply replicate the existing interface of an object
+3. Add relevant functionality to the redefined member function
+
+Protection proxy
+
+```python
+class ProtectedResource:
+    def __init__(self, user):
+        self.user = user
+
+    def secured_method(self):
+        print(self.user.name)
+
+
+class User:
+    def __init__(self, name, auth_code):
+        self.name = name
+        self.auth_code = auth_code
+
+
+class ProtectedResourceProxy:
+    def __init__(self, user):
+        self.user = user
+
+    def secured_method(self):
+        if self.user.auth_code != "my super secret auth code":
+            print("Invalid auth code")
+            return
+
+        print(self.user.name)
+
+
+if __name__ == "__main__":
+    user = User("Jeremy", "my super secret auth code")
+
+    # Instead of calling ProtectedResource directly,
+    # now we call its proxy, which has added security logic
+    # resource = ProtectedResource(user)
+    resource = ProtectedResourceProxy(user)
+    resource.secured_method()
+```
+
+Virtual Proxy (Lazy)
+
+```python
+class Bitmap:
+    def __init__(self, filename):
+        print("Bitmap initialized")
+        self.filename = filename
+
+    def draw(self):
+        print(f"Start drawing bitmap loaded from {self.filename}")
+
+
+class LazyBitmapProxy:
+    def __init__(self, filename):
+        self.filename = filename
+        self._instance = None
+
+    def draw(self):
+        if self._instance is None:
+            self._instance = Bitmap(self.filename)
+        print(f"Start drawing bitmap loaded from {self.filename}")
+
+
+def draw_image(image):
+    print("About to draw image")
+    image.draw()
+    print("Done drawing image")
+
+
+if __name__ == "__main__":
+    bmp = LazyBitmapProxy("emoji.png")
+    draw_image(bmp)
+
+```
