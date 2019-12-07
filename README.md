@@ -160,6 +160,155 @@ john = EmployeeFactory.new_sydney_employee("John") # John works @ 001, Main stre
 jane = EmployeeFactory.new_melbourne_employee("Jane") # Jane works @ 500, Kings street, Melbourne
 ```
 
+Section 09: Decorator
+
+1. Python's functional decorators wrap functions, no direct relations to the GoF Decorator pattern
+2. A decorator keeps the reference to the decorated object(s)
+3. Adds utility attributes and methods to augment the object's feature
+4. Proxying of underlying calls can be done dynamically (dynamic decorator)
+5. May or may not forward calls to the underlying object (dynamic decorator)
+
+Functional decorator ( no direct relations to the GoF Decorator pattern )
+
+```python
+import time
+
+
+def time_it(func):
+  def wrapper():
+    start = time.time()
+    result = func()
+    end = time.time()
+    print(f"{func.__name__} took {int((end-start)*1000)} ms")
+    return result
+  return wrapper
+
+@time_it
+def some_op():
+  print('Start op')
+  time.sleep(1)
+  print('Done op')
+  return 123
+
+if __name__ == "__main__":
+  some_op()
+```
+
+Class Decorator (keeps the reference to the decorated object(s) via **init**)
+
+```python
+from abc import ABC
+
+class Shape(ABC):
+  def __str__(self):
+    return ''
+
+
+class Circle(Shape):
+  def __init__(self, radius):
+    self.radius = radius
+
+  def resize(self, factor):
+    self.radius *= factor
+
+  def __str__(self):
+    return f"A circle of radius {self.radius}"
+
+class Square(Shape):
+  def __init__(self, side):
+    self.side = side
+
+  def __str__(self):
+    return f"A square of radius {self.side}"
+
+
+class ColoredShape(Shape):
+  def __init__(self, shape, color):
+    # prevent use same decorator twice on same underlying class
+    if isinstance(shape, ColoredShape):
+      raise Exception("Cannot apply same decorator twice")
+
+    self.shape = shape # always hold a reference to the underlying class
+    self.color = color
+
+  def __str__(self):
+    return f"{self.shape} of color {self.color}"
+
+
+if __name__ == "__main__":
+  shape = ColoredShape(
+    Circle(100),
+    'Red'
+  )
+  print(shape) # A circle of radius 100 of color Red
+```
+
+Dynamic Decorator (Proxying of underlying calls can be done dynamically, by forward calls to the underlying object)
+For example: in below code, use `__getattr__` magic method to forward calls to the underlying file object
+
+```python
+from io import TextIOWrapper
+
+class FileWithLogging:
+  def __init__(self, file: TextIOWrapper):
+    self.file = file
+
+  def writelines(self, strings):
+    self.file.writelines(strings)
+    print(f'wrote {len(strings)} lines')
+
+  """
+  Below we override getattr, setattr, and delattr method of FileWithLogging class,
+  to redirect IO operation to self.file
+  """
+
+  # Python will call this method whenever you request an attribute that hasn't already been defined.
+  # But if the attribute does exist, __getattr__ won’t be invoked
+  def __getattr__(self, item):
+    print(f'__getattr__ invoked with item: {item}')
+    return getattr(self.__dict__['file'], item) # get file[item], eg: file.write, file.close
+
+  # Called when an attribute assignment is attempted
+  def __setattr__(self, key, value):
+    # print(f'__setattr__ invoked with key: {key}, value: {value}')
+    if key == 'file':
+      """
+      If __setattr__() wants to assign to an instance attribute,
+      it should not simply execute self.name = value
+      this would cause a recursive call to itself.
+      Instead, it should insert the value in the dictionary of instance attributes,
+      e.g., self.__dict__[name] = value
+      """
+      self.__dict__[key] = value
+    else:
+      setattr(self.__dict__['file'], key)
+
+  # Called when an attribute deletion is attempted.
+  def __delattr__(self, item):
+    delattr(self.__dict__['file'], item)
+
+  def __iter__(self):
+    return self.file.__iter__()
+
+  def __next__(self):
+    return self.file.__next__()
+
+
+if __name__ == "__main__":
+  file = open("./hello.txt", "w")
+
+  file_with_logging = FileWithLogging(file)
+
+  file_with_logging.writelines([
+    "First line\n",
+    "Second line\n",
+    "Third line\n"
+  ])
+
+  file_with_logging.write('testing last line.')
+  file_with_logging.close()
+```
+
 ### Section 12: Proxy
 
 1. A proxy has the same interface as the underlying object
